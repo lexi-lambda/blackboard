@@ -102,9 +102,11 @@
 
   (loop e #:style (compute-style #f plain)))
 
+;; simple demo
 (module+ main
-  (require "unicode.rkt"
-           (prefix-in p: pict))
+  (require racket/draw
+           (prefix-in p: pict)
+           "unicode.rkt")
 
   (define (add-white-bg p)
     (p:pin-over (p:filled-rectangle (p:pict-width p) (p:pict-height p) #:draw-border? #f #:color "white") 0 0 p))
@@ -114,9 +116,49 @@
         p:pict->bitmap
         (send save-file where 'png)))
 
+  (define (save-pict-svg p where)
+    (define dc (new svg-dc% [width (p:pict-width p)]
+                            [height (p:pict-height p)]
+                            [output where]
+                            [exists 'truncate/replace]))
+    (send dc start-doc "")
+    (send dc start-page)
+    (p:draw-pict (add-white-bg p) dc 0 0)
+    (send dc end-page)
+    (send dc end-doc))
+
   (define thin-space  (m:space plain (ems 3/18) 0 0))
   (define med-space   (m:space plain (ems 4/18) 0 0))
   (define thick-space (m:space plain (ems 5/18) 0 0))
+  (define quad        (m:space plain (ems 1)    0 0))
+
+  (define (italic-glyph c)
+    (m:text plain (string (math-char c #:italic? #t))))
+
+  (define (demo-specimen #:family math-family)
+    (m:scripts (style s:math-font (make-font-description #:family math-family))
+               (italic-glyph #\f)
+               (m:text plain "1")
+               (m:text plain "2")))
+
+  (define (demo-specimens #:explain? explain?)
+    (~> (for/list ([family (in-list '("Blackboard Modern Math"
+                                      "Blackboard Pagella Math"
+                                      "Blackboard Cambria Math"))])
+          (demo-specimen #:family family))
+        (add-between (m:space (style s:explain-tokens? #f) (ems 1/2) 0 0))
+        (m:row (style s:font (make-font-description #:size 48)
+                      s:explain-tokens? explain?)
+               _)
+        element->mpict
+        (inset 5)))
+
+  (~> (p:vl-append (demo-specimens #:explain? #f)
+                   (demo-specimens #:explain? #t))
+      #;(~> (p:scale 3)
+          (p:freeze #:scale 2))
+      (~> (p:scale 10)
+          (save-pict-svg "/tmp/example.svg")))
 
   #;(~> (m:group (style s:font (make-font-description #:size 72)
                       s:math-font (make-partial-font-description #:family "Blackboard Modern Math"))
