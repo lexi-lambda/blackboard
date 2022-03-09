@@ -76,9 +76,9 @@
        (match e
          [(m:space _ width ascent descent)
           (define ppem (font-description-size (font-describe (resolve-math-font))))
-          (~> (blank #:w (absolutize #:ppem ppem width)
-                     #:a (absolutize #:ppem ppem ascent)
-                     #:d (absolutize #:ppem ppem descent))
+          (~> (blank #:w (make-size-absolute #:ppem ppem width)
+                     #:a (make-size-absolute #:ppem ppem ascent)
+                     #:d (make-size-absolute #:ppem ppem descent))
               (maybe-explain #:token? #t))]
 
          [(m:row _ content)
@@ -155,9 +155,9 @@
 
   (~> (p:vl-append (demo-specimens #:explain? #f)
                    (demo-specimens #:explain? #t))
-      #;(~> (p:scale 3)
+      (~> (p:scale 3)
           (p:freeze #:scale 2))
-      (~> (p:scale 10)
+      #;(~> (p:scale 10)
           (save-pict-svg "/tmp/example.svg")))
 
   #;(~> (m:group (style s:font (make-font-description #:size 72)
