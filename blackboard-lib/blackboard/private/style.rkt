@@ -1,5 +1,30 @@
 #lang racket/base
 
+;; This module defines styles and style properties, which together implement
+;; a limited form of CSS-like style inheritance and cascading.
+;;
+;; A `style` is essentially a dictionary that maps style properties to values.
+;; Most of the magic lies in the style properties themselves, which are more
+;; than just simple keys:
+;;
+;; * Style properties include a default value, which is returned by
+;;   `computed-style-value` if a value has not been explicitly specified.
+;;
+;; * Style properties can specify how multiple values for the same property
+;;   should be combined when styles are combined by `combine-styles`.
+;;
+;; * Style properties can be *inherited* or *uninherited*, which controls
+;;   whether or not their values are inherited from the parent set of styles
+;;   passed to `compute-style`.
+;;
+;; * Contracts can be attached to style properties to restrict the set of legal
+;;   values that a property may be associated with.
+;;
+;; The values of style properties cannot be queried from a style directly, since
+;; the ultimate values may depend on inherited values. Instead, `compute-style`
+;; must be used to explicitly resolve the style into a `computed-style`, which
+;; may then be queried using `computed-style-value`.
+
 (require racket/contract
          racket/hash
          racket/list
@@ -39,6 +64,10 @@
                 impersonator-target]
   (make-impersonator-property 'impersonator-of))
 
+;; A style property key is essentially the “kernel” of a style property. It
+;; contains all of the property’s metadata, and it is is the value used as a
+;; hash key in a `style` or `computed-style`. The `style-property` structure
+;; annotates a `style-property-key` with contract projections.
 (struct style-property-key (name default combine-proc)
   #:name info:style-property-key
   #:constructor-name unused-make-style-property-key)
@@ -54,6 +83,10 @@
   (unquoted-printing-string
    (format "#<style-property:~a>" (style-property-key-name key))))
 
+;; Annotates a style property key (which is, in a sense, the “real” style
+;; property) with contract projections. When a contract is applied to a
+;; `style-property` structure, the result is a chaperone or impersonator of the
+;; uncontracted structure, but the `key`s of both structures are always `eq?`.
 (struct style-property (key guard-proc extract-proc)
   #:constructor-name internal-make-style-property
   #:property prop:impersonator-of (λ (self) (impersonator-target self #f))
